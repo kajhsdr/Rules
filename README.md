@@ -43,17 +43,31 @@
 
 ### 与公共 AdBlock 列表的差异
 
-本规则集特意**不包含** `i.snssdk.com`，但实测发现公共 AdBlock 列表（如
-`217heidai/adblockfilters`）把它包含在内（条目 `+.i.snssdk.com`）。
+公共 AdBlock 列表（如 `217heidai/adblockfilters`，21.5 万条）会拦截两个
+本规则集特意排除的域名：
 
-`i.snssdk.com` 承担的是**用户中心**（`/ucenter_web/novel-dragon/...`）等业务，
-名字里的 `i` 容易被误读为广告位。若你同时启用了公共 AdBlock 列表，建议为它加一条
-白名单规则，否则可能出现账号相关功能异常：
+| 域名 | 公共列表条目 | 本规则集 | 影响 |
+|---|---|---|---|
+| `i.snssdk.com` | `+.i.snssdk.com` | 不包含 | 用户中心、钱包、免广告特权 |
+| `ib.snssdk.com` | `+.ib.snssdk.com` | 不包含 | push 通道 |
+| `is.snssdk.com` | `+.is.snssdk.com` | 不包含 | AB 实验 / 广告设置下发 |
+
+名字里的 `i` / `ib` / `is` 容易被误读为广告位，实际都是业务域名：
+
+- `i.snssdk.com` 承担 `/luckycat/novel/v1/user/*`（账号、钱包、个人资料）
+  与 `/ucenter_web/`，误拦会造成账号相关功能异常。
+- `is.snssdk.com` 下发 AB 实验与广告位配置，**拦截它反而对去广告有利**
+  （拉不到广告配置），但可能导致部分功能开关失效。保留与否自行权衡。
+
+推荐在 AdBlock 之前加白名单（本仓库实测生效）：
 
 ```yaml
 rules:
-  # 放在 AdBlock 规则之前
-  - "DOMAIN-SUFFIX,i.snssdk.com,DIRECT"
+  - "RULE-SET,Local-IP,DIRECT,no-resolve"
+  - "DOMAIN-SUFFIX,i.snssdk.com,DIRECT"   # 用户中心，建议放行
+  - "DOMAIN-SUFFIX,ib.snssdk.com,DIRECT"  # push，按需
+  # is.snssdk.com 如需放行再取消注释
+  # - "DOMAIN-SUFFIX,is.snssdk.com,DIRECT"
   - "RULE-SET,Fanqie-AdBlock,REJECT"
   - "RULE-SET,AdBlock,🚫AdBlock"
 ```
