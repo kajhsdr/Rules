@@ -41,6 +41,23 @@
 | `zlink.fqnovel.com` | App 唤起 |
 | `polaris.zijieapi.com` | 配置下发 |
 
+### 与公共 AdBlock 列表的差异
+
+本规则集特意**不包含** `i.snssdk.com`，但实测发现公共 AdBlock 列表（如
+`217heidai/adblockfilters`）把它包含在内（条目 `+.i.snssdk.com`）。
+
+`i.snssdk.com` 承担的是**用户中心**（`/ucenter_web/novel-dragon/...`）等业务，
+名字里的 `i` 容易被误读为广告位。若你同时启用了公共 AdBlock 列表，建议为它加一条
+白名单规则，否则可能出现账号相关功能异常：
+
+```yaml
+rules:
+  # 放在 AdBlock 规则之前
+  - "DOMAIN-SUFFIX,i.snssdk.com,DIRECT"
+  - "RULE-SET,Fanqie-AdBlock,REJECT"
+  - "RULE-SET,AdBlock,🚫AdBlock"
+```
+
 ### 分层说明
 
 规则按误拦风险分三层：
