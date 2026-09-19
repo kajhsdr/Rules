@@ -1,0 +1,11 @@
+# 统一换行符，避免 mihomo 解析 yaml 时受 CRLF 影响
+* text=auto eol=lf
+
+# mrs 是二进制规则集，禁止任何转换
+*.mrs binary
+*.mrs -text -diff
+
+# 规则文件明确用 LF
+*.yaml text eol=lf
+*.txt text eol=lf
+*.list text eol=lf
