@@ -1,0 +1,42 @@
+# 番茄小说 去广告 - Clash rule-provider 格式
+#
+# 用法：保存为 fanqie-adblock.yaml 放到 Clash 配置目录，
+#       然后在配置里声明 rule-provider 并引用。
+#
+# rule-providers:
+#   fanqie-adblock:
+#     type: http
+#     behavior: classical
+#     url: "https://你的地址/fanqie-adblock.yaml"
+#     path: ./ruleset/fanqie-adblock.yaml
+#     interval: 86400
+#
+# rules:
+#   - RULE-SET,fanqie-adblock,REJECT
+#   - ... 其余规则
+
+payload:
+  # L1 日志 / 监控 / 归因
+  - DOMAIN-SUFFIX,applog.snssdk.com
+  - DOMAIN-SUFFIX,applog.zijieapi.com
+  - DOMAIN-SUFFIX,rtapplog.snssdk.com
+  - DOMAIN-SUFFIX,log.snssdk.com
+  - DOMAIN-SUFFIX,log.zijieapi.com
+  - DOMAIN-SUFFIX,rtlog.snssdk.com
+  - DOMAIN-SUFFIX,rtlog.zijieapi.com
+  - DOMAIN-SUFFIX,log.bytedance.net
+  - DOMAIN-SUFFIX,mon.snssdk.com
+  - DOMAIN-SUFFIX,mon.zijieapi.com
+  - DOMAIN-SUFFIX,mon.toutiao.com
+  - DOMAIN-SUFFIX,mon.toutiaocloud.com
+  - DOMAIN-SUFFIX,mon.toutiaocloud.net
+  - DOMAIN-SUFFIX,monsetting.toutiao.com
+  - DOMAIN-SUFFIX,dig.bdurl.net
+  # L2 广告投放
+  - DOMAIN-SUFFIX,ad.zijieapi.com
+  - DOMAIN-SUFFIX,oceanengine.com
+  - DOMAIN-SUFFIX,ad.oceanengine.com
+  - DOMAIN-SUFFIX,brand.oceanengine.com
+  - DOMAIN-SUFFIX,clue.oceanengine.com
+  - DOMAIN-SUFFIX,leads.oceanengine.com
+  - DOMAIN-SUFFIX,boe.i.snssdk.com

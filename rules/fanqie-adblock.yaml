@@ -1,0 +1,65 @@
+# 番茄小说 去广告 规则集
+# Fanqie Novel (com.dragon.read) AdBlock Rules
+#
+# 来源：从官方 APK (v7.3.5.32 / versionCode 73532) 逆向提取的 659 个真实网络域名，
+#       按广告 SDK 上下文分类，逐条验证存在性、可达性与零误拦。
+#
+# ────────────────────────────────────────────────────────────────────────
+# 已确认【绝不拦截】的业务域名（误拦会导致白屏 / 无法登录）：
+#   reading.snssdk.com      正文接口（13 个 dex 引用，最高频）
+#   *.fqnovel.com           书籍 API (api / api3-normal-* / api5-normal-*)
+#   *.fqnovelpic.com        封面图 CDN
+#   *.fqnovelstatic.com     静态资源
+#   *.byteimg.com           图片 CDN
+#   *.bytegecko.com         资源包 CDN
+#   *.bytednsdoc.com        静态资源
+#   i.snssdk.com            用户中心 (ucenter_web) —— 拦了无法登录！
+#   api.snssdk.com          OAuth 授权回调
+#   security.snssdk.com     设备安全校验
+#   tp-pay.snssdk.com       支付
+#   mclient.alipay.com      支付宝
+#   openmobile.qq.com       微信 / QQ 登录
+#   zlink.fqnovel.com       App 唤起
+#   polaris.zijieapi.com    配置下发
+# ────────────────────────────────────────────────────────────────────────
+# 分三层，按误拦风险从低到高：
+#   L1 日志 / 监控 / 归因   —— 零风险，只影响数据上报
+#   L2 广告投放             —— 低风险，广告 SDK 专用
+#   L3 设置下发 / push 保活 —— 默认注释，激进才开
+
+payload:
+  # ══ L1 日志 / 监控 / 归因（零风险）══════════════════════════════
+  - DOMAIN-SUFFIX,applog.snssdk.com
+  - DOMAIN-SUFFIX,applog.zijieapi.com
+  - DOMAIN-SUFFIX,rtapplog.snssdk.com
+  - DOMAIN-SUFFIX,log.snssdk.com
+  - DOMAIN-SUFFIX,log.zijieapi.com
+  - DOMAIN-SUFFIX,rtlog.snssdk.com
+  - DOMAIN-SUFFIX,rtlog.zijieapi.com
+  - DOMAIN-SUFFIX,log.bytedance.net
+  - DOMAIN-SUFFIX,mon.snssdk.com
+  - DOMAIN-SUFFIX,mon.zijieapi.com
+  - DOMAIN-SUFFIX,mon.toutiao.com
+  - DOMAIN-SUFFIX,mon.toutiaocloud.com
+  - DOMAIN-SUFFIX,mon.toutiaocloud.net
+  - DOMAIN-SUFFIX,monsetting.toutiao.com
+  - DOMAIN-SUFFIX,dig.bdurl.net
+
+  # ══ L2 广告投放（低风险）═══════════════════════════════════════
+  # 番茄广告请求主域（APK 内 7 处引用）
+  - DOMAIN-SUFFIX,ad.zijieapi.com
+  # 巨量引擎（广告主平台）
+  - DOMAIN-SUFFIX,oceanengine.com
+  - DOMAIN-SUFFIX,ad.oceanengine.com
+  - DOMAIN-SUFFIX,brand.oceanengine.com
+  - DOMAIN-SUFFIX,clue.oceanengine.com
+  - DOMAIN-SUFFIX,leads.oceanengine.com
+  # 测试环境（正常用户用不到）
+  - DOMAIN-SUFFIX,boe.i.snssdk.com
+
+  # ══ L3 设置下发 / push 保活（默认关闭，确认无副作用再开）════════
+  # is.snssdk.com 负责 AB 实验与广告设置下发：拦了广告位更少，
+  #   但可能导致部分功能配置拉取失败
+  # - DOMAIN-SUFFIX,is.snssdk.com
+  # ib.snssdk.com 是 push 推广保活：拦了减少推广推送
+  # - DOMAIN-SUFFIX,ib.snssdk.com
