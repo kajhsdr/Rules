@@ -127,6 +127,7 @@ rules:
 |---|---|
 | `quantumultx/jd-wskey-capture.conf` | Quantumult X 重写配置 |
 | `quantumultx/scripts/jd-wskey-capture.js` | 抓取脚本 |
+| `quantumultx/jd-wskey.boxjs.json` | BoxJs 订阅（可选的图形配置界面） |
 
 ### 抓取原理
 
@@ -181,7 +182,7 @@ https://cdn.jsdelivr.net/gh/kajhsdr/Rules@main/quantumultx/jd-wskey-capture.conf
 | client_id | `h6p4roq-Ba3N` |
 | 环境变量名 | `JD_WSCK` |
 
-要换青龙、或改用用户名密码鉴权，两种方式（后者优先）：
+要换青龙、或改用用户名密码鉴权，三种方式（优先级从低到高）：
 
 1. 改脚本顶部的 `CONFIG`
 2. 写进持久化存储，key = `jd_wskey_config`，value 为 JSON：
@@ -190,12 +191,44 @@ https://cdn.jsdelivr.net/gh/kajhsdr/Rules@main/quantumultx/jd-wskey-capture.conf
    {"ql_host":"https://ql.example.com","ql_auth":"password","ql_id":"用户名","ql_secret":"密码","env_name":"JD_WSCK"}
    ```
 
+3. 用 BoxJs 在手机上填表（见下）
+
 > ⚠️ 青龙地址与 client_secret 写在本仓库里是公开的。`192.168.1.2` 是内网地址，
 > 外网连不上，所以暂时没有实际风险；**如果哪天青龙暴露到公网，务必先换掉这个
 > client_secret**。
 
 手机需要和 `192.168.1.2` 在同一局域网。同时确认 QX 的「绕过」设置包含内网段，
 否则访问青龙的请求会被代理绕走。
+
+### 用 BoxJs 改配置（可选）
+
+[BoxJs](https://github.com/chavyleung/scripts) 是 QX 生态的图形配置面板，装上之后
+可以在手机上改参数，不用动脚本。**不装也能用** —— 上面三种方式里的前两种不需要它。
+
+**1. 装 BoxJs**（一次性）
+
+QX → 重写 → 引用 → 添加：
+
+```
+https://raw.githubusercontent.com/chavyleung/scripts/master/box/rewrite/boxjs.rewrite.quanx.conf
+```
+
+然后用 Safari 打开 `http://boxjs.com`，能看到 BoxJs 界面即安装成功。
+
+**2. 添加本脚本的订阅**
+
+BoxJs → 底部「订阅」→ 右上角 `+` → 填：
+
+```
+https://cdn.jsdelivr.net/gh/kajhsdr/Rules@main/quantumultx/jd-wskey.boxjs.json
+```
+
+**3. 填参数**
+
+BoxJs → 底部「应用」→「京东 Wskey → 青龙」→ 表单里改 → 保存。
+
+表单里改的值存在持久化存储的 `@jd_wskey`（JSON），优先级最高，会覆盖脚本内置值。
+脚本每次运行都会重新读，改完立即生效，不用重装重写。
 
 ### 工作流程
 

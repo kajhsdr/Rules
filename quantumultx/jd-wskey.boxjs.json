@@ -1,0 +1,72 @@
+{
+  "id": "kajhsdr.jd-wskey.sub",
+  "name": "京东 Wskey 抓取",
+  "author": "@kajhsdr",
+  "icon": "https://github.com/kajhsdr.png",
+  "repo": "https://github.com/kajhsdr/Rules",
+  "apps": [
+    {
+      "id": "JD_Wskey",
+      "name": "京东 Wskey → 青龙",
+      "keys": [
+        "@jd_wskey.ql_host",
+        "@jd_wskey.ql_auth",
+        "@jd_wskey.ql_id",
+        "@jd_wskey.ql_secret",
+        "@jd_wskey.env_name"
+      ],
+      "settings": [
+        {
+          "id": "@jd_wskey.ql_host",
+          "name": "青龙地址",
+          "val": "http://192.168.1.2:5700",
+          "type": "text",
+          "desc": "青龙面板地址，手机必须能访问到。不要带结尾斜杠"
+        },
+        {
+          "id": "@jd_wskey.ql_auth",
+          "name": "鉴权方式",
+          "val": "openapi",
+          "type": "radios",
+          "items": [
+            {
+              "key": "openapi",
+              "label": "OpenApi 应用授权"
+            },
+            {
+              "key": "password",
+              "label": "用户名密码"
+            }
+          ],
+          "desc": "选 OpenApi 时下面两栏填 client_id / client_secret；选用户名密码则填用户名 / 密码"
+        },
+        {
+          "id": "@jd_wskey.ql_id",
+          "name": "client_id 或用户名",
+          "val": "h6p4roq-Ba3N",
+          "type": "text",
+          "desc": "青龙 → 系统设置 → 应用设置 → 新建应用（勾选环境变量）"
+        },
+        {
+          "id": "@jd_wskey.ql_secret",
+          "name": "client_secret 或密码",
+          "val": "DyHOL84HVWa7HD-MFAjMqMo2",
+          "type": "text",
+          "desc": "注意：client_secret 权限等同青龙环境变量的读写权，青龙别暴露公网"
+        },
+        {
+          "id": "@jd_wskey.env_name",
+          "name": "环境变量名",
+          "val": "JD_WSCK",
+          "type": "text",
+          "desc": "每个账号写一条，值为 pin=xxx;wskey=yyy;"
+        }
+      ],
+      "author": "@kajhsdr",
+      "repo": "https://github.com/kajhsdr/Rules",
+      "icons": [
+        "https://github.com/kajhsdr.png"
+      ]
+    }
+  ]
+}
