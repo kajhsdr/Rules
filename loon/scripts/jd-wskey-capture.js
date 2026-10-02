@@ -48,7 +48,7 @@ const cfg = Object.assign({}, DEFAULTS, readArgument());
     } catch (e) {
         const msg = (e && e.message) || String(e);
         console.log('[JD-Wskey] 失败: ' + msg);
-        notify('❌ 青龙上传失败', msg);
+        notify('❌ 京东 Wskey 失败', msg);
     } finally {
         $done({});
     }
@@ -161,7 +161,7 @@ async function sync(pairs) {
 
     const summary = formatSummary(created, updated, kept);
     console.log('[JD-Wskey] ' + summary);
-    if (created.length || updated.length) notify('京东 Wskey → 青龙', summary);
+    notify('京东 Wskey → 青龙', summary, '共 ' + (created.length + updated.length + kept.length) + ' 个账号');
 }
 
 function formatSummary(created, updated, kept) {
@@ -317,6 +317,6 @@ function write(key, value) {
     $persistentStore.write(String(value), key);
 }
 
-function notify(subtitle, body) {
-    $notification.post('京东 Wskey', subtitle, body || '');
+function notify(title, subtitle, body) {
+    $notification.post(title, subtitle || '', body || '');
 }

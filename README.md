@@ -177,7 +177,8 @@ https://raw.githubusercontent.com/kajhsdr/Rules/main/loon/jd-wskey-capture.plugi
 1. 打开京东 App（重新登录或切换账号后同样有效）
 2. App 调 SSO 接口 → 插件解析响应，每个账号写一条 `JD_WSCK`
 3. 变量值为 `pin=xxx;wskey=yyy;`，备注为 `JD_Wskey <pin>`
-4. 青龙里已有该 `pt_pin` → 更新；没有 → 新增；值没变 → 跳过（不写、不弹通知）
+4. 青龙里已有该 `pt_pin` → 更新；没有 → 新增；值没变 → 不写青龙
+5. 每次抓取都会弹 Loon 通知，内容形如 `新增 2: jd_a, jd_b` 或 `无变化 2`
 
 写入后青龙环境变量列表长这样：
 
