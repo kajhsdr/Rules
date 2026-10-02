@@ -1,11 +1,11 @@
 # Rules
 
-个人自用的代理规则集（Clash / mihomo）与 Loon 插件。
+个人自用的代理规则集（Clash / mihomo）与 Quantumult X 脚本。
 
 | 目录 | 内容 |
 |---|---|
 | `mihomo/` `rules/` | 番茄小说去广告规则 |
-| `loon/` | Loon 插件 |
+| `quantumultx/` | Quantumult X 脚本 |
 
 ## fanqie-adblock
 
@@ -119,16 +119,14 @@ rules:
 ## jd-wskey-capture
 
 自动提取京东 App 所有已登录账号的 `wskey` 与 `pt_pin`，写入青龙面板的
-`JD_WSCK` 环境变量。Quantumult X 与 Loon 都能用。
+`JD_WSCK` 环境变量。Quantumult X 专用。
 
 ### 文件
 
 | 文件 | 用途 |
 |---|---|
 | `quantumultx/jd-wskey-capture.conf` | Quantumult X 重写配置 |
-| `quantumultx/scripts/jd-wskey-capture.js` | 抓取脚本（QX / Loon 通用） |
-| `loon/jd-wskey-capture.plugin` | Loon 插件（参数界面 + 脚本挂载 + MITM） |
-| `loon/scripts/jd-wskey-capture.js` | Loon 专用脚本副本 |
+| `quantumultx/scripts/jd-wskey-capture.js` | 抓取脚本 |
 
 ### 抓取原理
 
@@ -145,8 +143,8 @@ rules:
 `sessionTicket` 就是 `wskey` —— 与 App 实际带到 `im-x.jd.com` 请求 Cookie 里的
 `wskey` 逐字节相同（已实测比对）。pin 与 wskey 同源，直接配对，不需要猜。
 
-插件主路径就挂这个接口的**响应**（`http-response`）；若接口未触发，
-再用 `http-request` 从 `*.jd.com` 的 Cookie 兜底抓 `wskey` / `pt_pin`。
+脚本主路径挂这个接口的**响应**（`script-response-body`）；若接口未触发，
+再用 `script-request-header` 从 `*.jd.com` 的 Cookie 兜底抓 `wskey` / `pt_pin`。
 
 ### 实测数据（383 条请求的抓包）
 
@@ -162,8 +160,6 @@ rules:
 
 ### 安装
 
-**Quantumult X**
-
 1. 重写 → 引用 → 添加：
 
 ```
@@ -171,19 +167,7 @@ https://cdn.jsdelivr.net/gh/kajhsdr/Rules@main/quantumultx/jd-wskey-capture.conf
 ```
 
 2. 青龙配置已内置，直接下一步
-3. 打开 MITM、信任证书
-4. 打开京东 App
-
-**Loon**
-
-1. 配置 → 插件 → 添加：
-
-```
-https://raw.githubusercontent.com/kajhsdr/Rules/main/loon/jd-wskey-capture.plugin
-```
-
-2. 在插件参数界面填青龙信息
-3. **断开重连 VPN**（Loon 加了插件后必须重连才会加载脚本）
+3. 打开 MITM、信任证书（iOS「关于本机 → 证书信任设置」）
 4. 打开京东 App
 
 ### 青龙配置
@@ -197,23 +181,21 @@ https://raw.githubusercontent.com/kajhsdr/Rules/main/loon/jd-wskey-capture.plugi
 | client_id | `h6p4roq-Ba3N` |
 | 环境变量名 | `JD_WSCK` |
 
-要换青龙、或改用用户名密码鉴权，三种方式（优先级从低到高）：
+要换青龙、或改用用户名密码鉴权，两种方式（后者优先）：
 
-1. 改脚本顶部的 `CONFIG`（QX）/ `DEFAULTS`（Loon）
+1. 改脚本顶部的 `CONFIG`
 2. 写进持久化存储，key = `jd_wskey_config`，value 为 JSON：
 
    ```json
    {"ql_host":"https://ql.example.com","ql_auth":"password","ql_id":"用户名","ql_secret":"密码","env_name":"JD_WSCK"}
    ```
 
-3. Loon：插件参数界面（留空则用内置值）
-
 > ⚠️ 青龙地址与 client_secret 写在本仓库里是公开的。`192.168.1.2` 是内网地址，
 > 外网连不上，所以暂时没有实际风险；**如果哪天青龙暴露到公网，务必先换掉这个
 > client_secret**。
 
-手机需要和 `192.168.1.2` 在同一局域网。同时确认 QX 的「绕过」/ Loon 的 bypass
-包含内网段，否则访问青龙的请求会被代理绕走。
+手机需要和 `192.168.1.2` 在同一局域网。同时确认 QX 的「绕过」设置包含内网段，
+否则访问青龙的请求会被代理绕走。
 
 ### 工作流程
 
@@ -221,7 +203,7 @@ https://raw.githubusercontent.com/kajhsdr/Rules/main/loon/jd-wskey-capture.plugi
 2. App 调 SSO 接口 → 脚本解析响应，每个账号写一条 `JD_WSCK`
 3. 变量值为 `pin=xxx;wskey=yyy;`，备注为 `JD_Wskey <pin>`
 4. 青龙里已有该 `pt_pin` → 更新；没有 → 新增；值没变 → 不写青龙
-5. 每次抓取都会弹 Loon 通知，内容形如 `新增 2: jd_a, jd_b` 或 `无变化 2`
+5. 每次抓取都会弹 QX 通知，内容形如 `新增 2: jd_a, jd_b` 或 `无变化 2`
 
 写入后青龙环境变量列表长这样：
 
@@ -240,8 +222,7 @@ https://raw.githubusercontent.com/kajhsdr/Rules/main/loon/jd-wskey-capture.plugi
 ### 注意
 
 - MITM 范围为 `*.jd.com`、`*.jd.hk`，会解密全部京东流量。
-- **Loon**：`[Argument]` 参数界面需要 Loon Build 733 及以上；更老的版本改用脚本顶部的 `DEFAULTS` 常量。
-- **Quantumult X**：脚本地址默认走 jsDelivr CDN（`raw.githubusercontent.com` 在部分网络不可达）。
+- 脚本地址走 jsDelivr CDN（`raw.githubusercontent.com` 在部分网络不可达）。
   jsDelivr 对 `@main` 有缓存，改脚本后可能要等一会儿才生效。
 - `wskey` 是长期凭证，等价于账号密码。**抓包文件（.har）不要提交到公开仓库**，
   本仓库已通过 `.gitignore` 屏蔽 `*.har`。

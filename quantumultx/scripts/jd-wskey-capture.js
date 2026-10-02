@@ -1,7 +1,5 @@
 /*
- * 京东 App：wskey / pt_pin 捕获 → 上传青龙面板
- *
- * 支持 Quantumult X / Loon / Surge
+ * 京东 App：wskey / pt_pin 捕获 → 上传青龙面板（Quantumult X）
  *
  * 主路径（响应脚本）：
  *   京东 App 启动时会请求 POST https://sso.jd.com/appJdst/update，
@@ -17,7 +15,7 @@
  * 青龙侧写入格式：变量名 JD_WSCK，值 pin=xxx;wskey=yyy;
  *
  * 配置：已内置在下方 CONFIG。如果要用持久化存储覆盖（key = jd_wskey_config），
- * value 为同结构的 JSON，优先级高于 CONFIG。Loon 插件参数同样会覆盖 CONFIG。
+ * value 为同结构的 JSON，优先级高于 CONFIG。
  */
 
 const CONFIG = {
@@ -235,6 +233,8 @@ function findEnv(list, pin) {
 
 /* ---------- 平台适配 ---------- */
 
+/* QX 用 $notify / $prefs / $task.fetch，参见 https://github.com/crossutility/Quantumult-X */
+
 function trace() {
     const now = Date.now();
     if (now - (Number(read(STORE.traceTs)) || 0) < 3000) return;
@@ -245,13 +245,6 @@ function trace() {
 
 function loadConfig() {
     const out = Object.assign({}, CONFIG);
-
-    // Loon 插件参数
-    try {
-        if (typeof $argument === 'object' && $argument && !Array.isArray($argument)) {
-            Object.assign(out, pruneEmpty($argument));
-        }
-    } catch (e) { /* 忽略 */ }
 
     // 持久化存储里的 JSON 覆盖
     const raw = read(CONFIG_KEY);
@@ -273,64 +266,33 @@ function pruneEmpty(obj) {
 }
 
 function http(method, url, headers, body) {
-    const m = String(method).toUpperCase();
-
-    // Quantumult X / Surge / Loon 3+ 走 $task.fetch
-    if (typeof $task !== 'undefined' && typeof $task.fetch === 'function') {
-        const opt = { url: url, method: m, headers: headers || {} };
-        if (body !== undefined) opt.body = body;
-        return $task.fetch(opt).then(function (r) {
-            const code = r.statusCode !== undefined ? r.statusCode : r.status;
-            return { status: code, body: r.body || '' };
-        });
-    }
-
-    // Loon 旧版走 $httpClient
-    return new Promise(function (resolve, reject) {
-        const fn = $httpClient[m.toLowerCase()];
-        if (typeof fn !== 'function') {
-            reject(new Error('当前客户端不支持 ' + m + ' 请求'));
-            return;
-        }
-        const opt = { url: url, headers: headers || {} };
-        if (body !== undefined) opt.body = body;
-
-        fn.call($httpClient, opt, function (err, resp, data) {
-            if (err) {
-                reject(new Error(err + ''));
-                return;
-            }
-            resolve({ status: resp ? resp.status : 0, body: data || '' });
-        });
+    const opt = { url: url, method: String(method).toUpperCase(), headers: headers || {} };
+    if (body !== undefined) opt.body = body;
+    return $task.fetch(opt).then(function (r) {
+        const code = r.statusCode !== undefined ? r.statusCode : r.status;
+        return { status: code, body: r.body || '' };
     });
 }
 
 function read(key) {
     try {
-        if (typeof $prefs !== 'undefined') {
-            const v = $prefs.valueForKey(key);
-            return v === null || v === undefined ? '' : v;
-        }
-        if (typeof $persistentStore !== 'undefined') {
-            const v = $persistentStore.read(key);
-            return v === null || v === undefined ? '' : v;
-        }
-    } catch (e) { /* 忽略 */ }
-    return '';
+        const v = $prefs.valueForKey(key);
+        return v === null || v === undefined ? '' : v;
+    } catch (e) {
+        return '';
+    }
 }
 
 function write(key, value) {
     try {
         // 注意 QX 的参数顺序是 (value, key)
-        if (typeof $prefs !== 'undefined') $prefs.setValueForKey(String(value), key);
-        else if (typeof $persistentStore !== 'undefined') $persistentStore.write(String(value), key);
+        $prefs.setValueForKey(String(value), key);
     } catch (e) { /* 忽略 */ }
 }
 
 function notify(title, subtitle, body) {
     try {
-        if (typeof $notify !== 'undefined') $notify(title, subtitle || '', body || '');
-        else if (typeof $notification !== 'undefined') $notification.post(title, subtitle || '', body || '');
+        $notify(title, subtitle || '', body || '');
     } catch (e) { /* 忽略 */ }
 }
 
