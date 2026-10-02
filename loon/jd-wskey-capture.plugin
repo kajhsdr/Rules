@@ -1,0 +1,23 @@
+#!name = 京东 App Wskey 抓取
+#!desc = 自动提取京东 App 所有已登录账号的 wskey 与 pt_pin，写入青龙面板的 JD_WSCK 环境变量（备注带账号昵称）
+#!author = kajhsdr
+#!homepage = https://github.com/kajhsdr/Rules
+#!icon = https://img11.360buyimg.com/img/jfs/t1/199566/37/17465/5937/6100e4e4E16306b0d/9d1f9f2b6a9a0b4e.png
+#!system = iOS,iPadOS,macOS
+#!tag = 京东,青龙
+#!type = normal
+
+[Argument]
+ql_host = input,"",tag=青龙地址,desc=青龙面板地址，例如 https://ql.example.com
+ql_auth = select,"openapi","password",tag=鉴权方式,desc=openapi=应用授权（推荐）；password=用户名密码
+ql_id = input,"",tag=client_id 或用户名
+ql_secret = input,"",tag=client_secret 或密码
+env_name = input,"JD_WSCK",tag=环境变量名
+enabled = switch,true,tag=启用抓取
+
+[Script]
+http-response ^https?:\/\/sso\.jd\.com\/appJdst\/update script-path=https://raw.githubusercontent.com/kajhsdr/Rules/main/loon/scripts/jd-wskey-capture.js,requires-body=true,tag=京东SSO凭证抓取,argument=[{ql_host},{ql_auth},{ql_id},{ql_secret},{env_name}],enable={enabled}
+http-request ^https?:\/\/([a-z0-9-]+\.)*jd\.com\/ script-path=https://raw.githubusercontent.com/kajhsdr/Rules/main/loon/scripts/jd-wskey-capture.js,requires-body=false,tag=京东Cookie兜底抓取,argument=[{ql_host},{ql_auth},{ql_id},{ql_secret},{env_name}],enable={enabled}
+
+[Mitm]
+hostname = %APPEND% *.jd.com, *.jd.hk

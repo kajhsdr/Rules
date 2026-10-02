@@ -1,0 +1,5 @@
+# 抓包文件可能含明文凭证（cookie / wskey / token），禁止提交
+*.har
+
+# 临时脚本
+.tmp_*
