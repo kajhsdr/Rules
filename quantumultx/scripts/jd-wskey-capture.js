@@ -26,7 +26,9 @@ const CONFIG = {
     ql_auth: 'openapi',
     ql_id: 'h6p4roq-Ba3N',
     ql_secret: 'DyHOL84HVWa7HD-MFAjMqMo2',
-    env_name: 'JD_WSCK'
+    env_name: 'JD_WSCK',
+    /* 不写进青龙的账号（pin），多个用逗号或换行分隔，留空则全部上传 */
+    exclude_pins: ''
 };
 
 const CONFIG_KEY = 'jd_wskey_config';
@@ -127,6 +129,28 @@ async function fromRequestCookie() {
 /* ---------- 青龙同步 ---------- */
 
 async function sync(pairs) {
+    const excluded = parseList(cfg.exclude_pins);
+    const targets = [];
+    const skipped = [];
+
+    for (const pair of pairs) {
+        if (isExcluded(pair.pin, excluded)) skipped.push(pair.pin);
+        else targets.push(pair);
+    }
+
+    if (skipped.length) {
+        console.log('[JD-Wskey] 按 exclude_pins 跳过 ' + skipped.length + ' 个账号: ' +
+            skipped.map(decodeSafe).join(', '));
+    }
+
+    // 全被排除就不用去青龙白跑一趟
+    if (!targets.length) {
+        const summary = formatSummary([], [], [], skipped);
+        console.log('[JD-Wskey] ' + summary);
+        notify('京东 Wskey → 青龙', summary, '全部已跳过');
+        return;
+    }
+
     const host = String(cfg.ql_host || '').trim().replace(/\/+$/, '');
     if (!host) throw new Error('未配置青龙地址（CONFIG.ql_host 或持久化存储 ' + CONFIG_KEY + '）');
     if (!cfg.ql_id || !cfg.ql_secret) throw new Error('未配置青龙鉴权信息');
@@ -145,7 +169,7 @@ async function sync(pairs) {
     const updated = [];
     const kept = [];
 
-    for (const pair of pairs) {
+    for (const pair of targets) {
         const old = findEnv(list, pair.pin);
 
         if (old && String(old.value || '').indexOf(pair.wskey) !== -1) {
@@ -174,17 +198,19 @@ async function sync(pairs) {
         }
     }
 
-    const summary = formatSummary(created, updated, kept);
+    const summary = formatSummary(created, updated, kept, skipped);
     console.log('[JD-Wskey] ' + summary);
     notify('京东 Wskey → 青龙', summary,
-        '共 ' + (created.length + updated.length + kept.length) + ' 个账号');
+        '共 ' + (created.length + updated.length + kept.length) + ' 个账号' +
+        (skipped.length ? '，跳过 ' + skipped.length + ' 个' : ''));
 }
 
-function formatSummary(created, updated, kept) {
+function formatSummary(created, updated, kept, skipped) {
     const parts = [];
     if (created.length) parts.push('新增 ' + created.length + ': ' + created.map(decodeSafe).join(', '));
     if (updated.length) parts.push('更新 ' + updated.length + ': ' + updated.map(decodeSafe).join(', '));
     if (kept.length) parts.push('无变化 ' + kept.length);
+    if (skipped && skipped.length) parts.push('跳过 ' + skipped.length + ': ' + skipped.map(decodeSafe).join(', '));
     return parts.join(' | ') || '无变化';
 }
 
@@ -312,6 +338,22 @@ function notify(title, subtitle, body) {
 function matchCookie(cookie, name) {
     const m = new RegExp('(?:^|;\\s*)' + name + '=([^;]*)', 'i').exec(cookie);
     return m ? m[1].trim() : '';
+}
+
+/* 逗号 / 分号 / 空白分隔，也接受数组 */
+function parseList(v) {
+    if (!v) return [];
+    const arr = Array.isArray(v) ? v : String(v).split(/[,，;；\s]+/);
+    return arr.map(function (s) { return String(s).trim(); }).filter(Boolean);
+}
+
+/* pin 可能以 URL 编码形式出现，两种写法都算匹配 */
+function isExcluded(pin, excluded) {
+    if (!excluded.length) return false;
+    const plain = decodeSafe(pin);
+    return excluded.some(function (item) {
+        return item === pin || decodeSafe(item) === plain;
+    });
 }
 
 function isValidWskey(v) {

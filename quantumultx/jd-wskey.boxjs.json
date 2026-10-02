@@ -13,7 +13,8 @@
         "@jd_wskey.ql_auth",
         "@jd_wskey.ql_id",
         "@jd_wskey.ql_secret",
-        "@jd_wskey.env_name"
+        "@jd_wskey.env_name",
+        "@jd_wskey.exclude_pins"
       ],
       "settings": [
         {
@@ -60,6 +61,15 @@
           "val": "JD_WSCK",
           "type": "text",
           "desc": "每个账号写一条，值为 pin=xxx;wskey=yyy;"
+        },
+        {
+          "id": "@jd_wskey.exclude_pins",
+          "name": "不抓取的账号",
+          "val": "",
+          "type": "textarea",
+          "autoGrow": true,
+          "rows": 3,
+          "desc": "填 pin（如 jd_abc123def456），多个用逗号或换行分隔，留空则全部上传。列在这里的账号不会被写进青龙；已经在青龙里的变量不会被自动删除，需要手动删"
         }
       ],
       "author": "@kajhsdr",
