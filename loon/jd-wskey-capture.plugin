@@ -13,11 +13,10 @@ ql_auth = select,"openapi","password",tag=鉴权方式,desc=openapi=应用授权
 ql_id = input,"",tag=client_id 或用户名
 ql_secret = input,"",tag=client_secret 或密码
 env_name = input,"JD_WSCK",tag=环境变量名
-enabled = switch,true,tag=启用抓取
 
 [Script]
-http-response ^https?:\/\/sso\.jd\.com\/appJdst\/update script-path=https://raw.githubusercontent.com/kajhsdr/Rules/main/loon/scripts/jd-wskey-capture.js,requires-body=true,tag=京东SSO凭证抓取,argument=[{ql_host},{ql_auth},{ql_id},{ql_secret},{env_name}],enable={enabled}
-http-request ^https?:\/\/([a-z0-9-]+\.)*jd\.com\/ script-path=https://raw.githubusercontent.com/kajhsdr/Rules/main/loon/scripts/jd-wskey-capture.js,requires-body=false,tag=京东Cookie兜底抓取,argument=[{ql_host},{ql_auth},{ql_id},{ql_secret},{env_name}],enable={enabled}
+http-response ^https?:\/\/sso\.jd\.com\/appJdst\/update script-path=https://raw.githubusercontent.com/kajhsdr/Rules/main/loon/scripts/jd-wskey-capture.js,requires-body=true,tag=京东SSO凭证抓取,argument=[{ql_host},{ql_auth},{ql_id},{ql_secret},{env_name}]
+http-request ^https?:\/\/([a-z0-9-]+\.)*jd\.com\/ script-path=https://raw.githubusercontent.com/kajhsdr/Rules/main/loon/scripts/jd-wskey-capture.js,requires-body=false,tag=京东Cookie兜底抓取,argument=[{ql_host},{ql_auth},{ql_id},{ql_secret},{env_name}]
 
 [Mitm]
 hostname = %APPEND% *.jd.com, *.jd.hk

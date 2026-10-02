@@ -24,7 +24,8 @@ const STORE = {
     wskey: 'jd_wskey_cap_wskey',
     wskeyTs: 'jd_wskey_cap_wskey_ts',
     token: 'jd_wskey_ql_token',
-    tokenExp: 'jd_wskey_ql_token_exp'
+    tokenExp: 'jd_wskey_ql_token_exp',
+    traceTs: 'jd_wskey_cap_trace_ts'
 };
 
 /* 兜底配置：Loon Build 733 以下不支持 [Argument]，可直接改这里 */
@@ -43,6 +44,7 @@ const cfg = Object.assign({}, DEFAULTS, readArgument());
 
 (async function main() {
     try {
+        trace();
         if (typeof $response !== 'undefined') await fromSsoResponse();
         else await fromRequestCookie();
     } catch (e) {
@@ -58,7 +60,10 @@ const cfg = Object.assign({}, DEFAULTS, readArgument());
 
 async function fromSsoResponse() {
     const json = parse($response.body);
-    if (!json || !Array.isArray(json.result)) return;
+    if (!json || !Array.isArray(json.result)) {
+        console.log('[JD-Wskey] SSO 响应无法解析，body 长度 ' + String($response.body || '').length);
+        return;
+    }
 
     const pairs = json.result
         .filter(function (it) { return it && isValidPin(it.pin) && isValidWskey(it.sessionTicket); })
@@ -222,6 +227,15 @@ function findEnv(list, pin) {
 }
 
 /* ---------- 基础设施 ---------- */
+
+/* 诊断：确认脚本确实被 Loon 调用（3 秒节流，避免刷屏） */
+function trace() {
+    const now = Date.now();
+    if (now - (Number(read(STORE.traceTs)) || 0) < 3000) return;
+    write(STORE.traceTs, now);
+    const phase = typeof $response === 'undefined' ? '请求' : '响应';
+    console.log('[JD-Wskey] 脚本已触发 [' + phase + '] ' + $request.url);
+}
 
 function matchCookie(cookie, name) {
     const m = new RegExp('(?:^|;\\s*)' + name + '=([^;]*)', 'i').exec(cookie);
