@@ -176,28 +176,18 @@ https://raw.githubusercontent.com/kajhsdr/Rules/main/loon/jd-wskey-capture.plugi
 
 1. 打开京东 App（重新登录或切换账号后同样有效）
 2. App 调 SSO 接口 → 插件解析响应，每个账号写一条 `JD_WSCK`
-3. 变量值为 `pin=xxx;wskey=yyy;`，备注为 `JD_Wskey <昵称> (<pin>)`
+3. 变量值为 `pin=xxx;wskey=yyy;`，备注为 `JD_Wskey <pin>`
 4. 青龙里已有该 `pt_pin` → 更新；没有 → 新增；值没变 → 跳过（不写、不弹通知）
 
 写入后青龙环境变量列表长这样：
 
 | 名称 | 值 | 备注 |
 |---|---|---|
-| `JD_WSCK` | `pin=jd_abc123def456;wskey=AAJxxxxxxxxxxxx...;` | `JD_Wskey 张三 (jd_abc123def456)` |
-| `JD_WSCK` | `pin=jd_xyz789uvw012;wskey=AAJyyyyyyyyyyyy...;` | `JD_Wskey 李四 (jd_xyz789uvw012)` |
+| `JD_WSCK` | `pin=jd_abc123def456;wskey=AAJxxxxxxxxxxxx...;` | `JD_Wskey jd_abc123def456` |
+| `JD_WSCK` | `pin=jd_xyz789uvw012;wskey=AAJyyyyyyyyyyyy...;` | `JD_Wskey jd_xyz789uvw012` |
 
 旧的 `pt_pin=xxx;wskey=yyy;` 写法也能被识别（不会写成重复变量），
 下次上传时自动改成 `pin=` 格式。
-
-### 备注里的昵称
-
-昵称来自 `https://me-api.jd.com/user_new/info/GetJDUserInfoUnion`，请求头带
-`pt_pin + pt_key + wskey`：
-
-- `pt_key` 是从京东 App 请求 Cookie 里顺手抓的（按 pin 存进 Loon 持久化存储）
-- 首次运行时可能还没抓到 `pt_key`，则只用 `wskey` 试；拿不到昵称就退化成 `JD_Wskey <pin>`
-- 昵称取不到不会影响上传，也不会把已写入的昵称抹掉
-- 值没变化时不查昵称（不会每次开 App 都发请求）
 
 ### 多账号
 

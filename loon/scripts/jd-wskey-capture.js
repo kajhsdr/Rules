@@ -24,13 +24,8 @@ const STORE = {
     wskey: 'jd_wskey_cap_wskey',
     wskeyTs: 'jd_wskey_cap_wskey_ts',
     token: 'jd_wskey_ql_token',
-    tokenExp: 'jd_wskey_ql_token_exp',
-    /* 每个账号一份：登录态 pt_key，供查昵称用 */
-    ptKeyPrefix: 'jd_wskey_cap_ptkey_'
+    tokenExp: 'jd_wskey_ql_token_exp'
 };
-
-/* 京东用户信息接口，用于取昵称写进备注 */
-const NICK_API = 'https://me-api.jd.com/user_new/info/GetJDUserInfoUnion?sceneval=2';
 
 /* 兜底配置：Loon Build 733 以下不支持 [Argument]，可直接改这里 */
 const DEFAULTS = {
@@ -82,10 +77,6 @@ async function fromRequestCookie() {
 
     const wskey = matchCookie(cookie, 'wskey');
     const pin = matchCookie(cookie, 'pt_pin');
-
-    // pt_key 与 pt_pin 常在同一条 Cookie 里，存下来供查昵称用
-    const ptKey = matchCookie(cookie, 'pt_key');
-    if (ptKey && isValidPin(pin)) write(STORE.ptKeyPrefix + pin, ptKey);
 
     let changed = false;
     if (isValidWskey(wskey) && wskey !== read(STORE.wskey)) {
@@ -148,7 +139,7 @@ async function sync(pairs) {
         }
 
         const value = 'pin=' + pair.pin + ';wskey=' + pair.wskey + ';';
-        const remarks = await buildRemarks(pair, old);
+        const remarks = 'JD_Wskey ' + decodeSafe(pair.pin);
 
         const body = old
             ? [{ id: old.id, _id: old._id, name: envName, value: value, remarks: remarks }]
@@ -179,45 +170,6 @@ function formatSummary(created, updated, kept) {
     if (updated.length) parts.push('更新 ' + updated.length + ': ' + updated.map(decodeSafe).join(', '));
     if (kept.length) parts.push('无变化 ' + kept.length);
     return parts.join(' | ') || '无变化';
-}
-
-/* ---------- 昵称备注 ---------- */
-
-/* 备注格式：JD_Wskey <昵称> (<pin>)，取不到昵称时退化为 JD_Wskey <pin> */
-async function buildRemarks(pair, old) {
-    const nick = await fetchNickname(pair);
-    const pin = decodeSafe(pair.pin);
-    if (nick) {
-        console.log('[JD-Wskey] 昵称 ' + pin + ' → ' + nick);
-        return 'JD_Wskey ' + nick + ' (' + pin + ')';
-    }
-    // 之前查到过昵称（备注里带 (pin)）就沿用，避免一次网络抖动把昵称抹掉
-    const prev = String((old && old.remarks) || '');
-    if (prev && prev.indexOf('(' + pin + ')') !== -1) return prev;
-    return 'JD_Wskey ' + pin;
-}
-
-async function fetchNickname(pair) {
-    try {
-        const parts = ['pt_pin=' + pair.pin];
-        const ptKey = read(STORE.ptKeyPrefix + pair.pin);
-        if (ptKey) parts.push('pt_key=' + ptKey);
-        parts.push('wskey=' + pair.wskey);
-
-        const res = await req('GET', NICK_API, {
-            'Cookie': parts.join(';'),
-            'Accept': 'application/json, text/plain, */*',
-            'User-Agent': 'JD4iPhone/167752 (iPhone; iOS 17.0; Scale/3.00)'
-        });
-
-        const json = parse(res.body);
-        const base = json && json.data && json.data.userInfo && json.data.userInfo.baseInfo;
-        const nick = base && base.nickname;
-        return typeof nick === 'string' ? nick.trim() : '';
-    } catch (e) {
-        console.log('[JD-Wskey] 查昵称失败: ' + ((e && e.message) || e));
-        return '';
-    }
 }
 
 async function getToken(host) {
