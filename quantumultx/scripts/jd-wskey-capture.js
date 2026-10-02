@@ -16,18 +16,15 @@
  *
  * 青龙侧写入格式：变量名 JD_WSCK，值 pin=xxx;wskey=yyy;
  *
- * 配置方式（二选一，后者优先）：
- *   1. 改下面的 CONFIG
- *   2. 写进持久化存储，key = jd_wskey_config，value 为同结构的 JSON：
- *      {"ql_host":"https://ql.example.com","ql_auth":"openapi","ql_id":"xxx","ql_secret":"yyy","env_name":"JD_WSCK"}
- *      Loon 插件参数会自动覆盖 CONFIG，无需额外设置。
+ * 配置：已内置在下方 CONFIG。如果要用持久化存储覆盖（key = jd_wskey_config），
+ * value 为同结构的 JSON，优先级高于 CONFIG。Loon 插件参数同样会覆盖 CONFIG。
  */
 
 const CONFIG = {
-    ql_host: '',
+    ql_host: 'http://192.168.1.2:5700',
     ql_auth: 'openapi',
-    ql_id: '',
-    ql_secret: '',
+    ql_id: 'h6p4roq-Ba3N',
+    ql_secret: 'DyHOL84HVWa7HD-MFAjMqMo2',
     env_name: 'JD_WSCK'
 };
 
@@ -252,15 +249,25 @@ function loadConfig() {
     // Loon 插件参数
     try {
         if (typeof $argument === 'object' && $argument && !Array.isArray($argument)) {
-            Object.assign(out, $argument);
+            Object.assign(out, pruneEmpty($argument));
         }
     } catch (e) { /* 忽略 */ }
 
-    // 持久化存储里的 JSON 覆盖（QX 用这个填配置）
+    // 持久化存储里的 JSON 覆盖
     const raw = read(CONFIG_KEY);
     if (raw) {
         const json = parse(raw);
-        if (json && typeof json === 'object') Object.assign(out, json);
+        if (json && typeof json === 'object') Object.assign(out, pruneEmpty(json));
+    }
+    return out;
+}
+
+/* 空值不覆盖内置配置 */
+function pruneEmpty(obj) {
+    const out = {};
+    for (const k in obj) {
+        const v = obj[k];
+        if (v !== '' && v !== null && v !== undefined) out[k] = v;
     }
     return out;
 }

@@ -127,7 +127,6 @@ rules:
 |---|---|
 | `quantumultx/jd-wskey-capture.conf` | Quantumult X 重写配置 |
 | `quantumultx/scripts/jd-wskey-capture.js` | 抓取脚本（QX / Loon 通用） |
-| `quantumultx/scripts/jd-wskey-setup.js` | 一次性配置写入脚本 |
 | `loon/jd-wskey-capture.plugin` | Loon 插件（参数界面 + 脚本挂载 + MITM） |
 | `loon/scripts/jd-wskey-capture.js` | Loon 专用脚本副本 |
 
@@ -171,7 +170,7 @@ rules:
 https://cdn.jsdelivr.net/gh/kajhsdr/Rules@main/quantumultx/jd-wskey-capture.conf
 ```
 
-2. 填青龙配置（见下）
+2. 青龙配置已内置，直接下一步
 3. 打开 MITM、信任证书
 4. 打开京东 App
 
@@ -189,23 +188,32 @@ https://raw.githubusercontent.com/kajhsdr/Rules/main/loon/jd-wskey-capture.plugi
 
 ### 青龙配置
 
-青龙面板 → 系统设置 → 应用设置 → 新建应用，权限勾选「环境变量」，记下
-`Client ID` 与 `Client Secret`。然后：
+已内置在脚本里，开箱即用：
 
-- **Loon**：直接填进插件参数（青龙地址 / 鉴权方式 / client_id / client_secret）
-- **Quantumult X**：QX 没有参数界面，用 Safari 访问一次下面这个地址即可
-  （配置存在手机本地的 QX 持久化存储，不进仓库）：
+| 项 | 值 |
+|---|---|
+| 青龙地址 | `http://192.168.1.2:5700` |
+| 鉴权方式 | `openapi` |
+| client_id | `h6p4roq-Ba3N` |
+| 环境变量名 | `JD_WSCK` |
 
-```
-http://www.jd.com/?__jd_wskey_setup&host=<青龙地址>&id=<client_id>&secret=<client_secret>
-```
+要换青龙、或改用用户名密码鉴权，三种方式（优先级从低到高）：
 
-  例：`http://www.jd.com/?__jd_wskey_setup&host=https://ql.example.com&id=abc123&secret=def456`
+1. 改脚本顶部的 `CONFIG`（QX）/ `DEFAULTS`（Loon）
+2. 写进持久化存储，key = `jd_wskey_config`，value 为 JSON：
 
-  看到「✅ 京东 Wskey 配置完成」通知就成功了。可选参数：`auth=password` 改用
-  用户名密码鉴权、`env=JD_COOKIE` 换环境变量名。完事可以清掉 Safari 历史里的这条 URL。
+   ```json
+   {"ql_host":"https://ql.example.com","ql_auth":"password","ql_id":"用户名","ql_secret":"密码","env_name":"JD_WSCK"}
+   ```
 
-不想用 OpenApi 就把鉴权方式设为 `password`，此时 `ql_id` 填用户名、`ql_secret` 填密码。
+3. Loon：插件参数界面（留空则用内置值）
+
+> ⚠️ 青龙地址与 client_secret 写在本仓库里是公开的。`192.168.1.2` 是内网地址，
+> 外网连不上，所以暂时没有实际风险；**如果哪天青龙暴露到公网，务必先换掉这个
+> client_secret**。
+
+手机需要和 `192.168.1.2` 在同一局域网。同时确认 QX 的「绕过」/ Loon 的 bypass
+包含内网段，否则访问青龙的请求会被代理绕走。
 
 ### 工作流程
 

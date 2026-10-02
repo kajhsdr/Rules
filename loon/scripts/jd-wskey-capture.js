@@ -28,19 +28,19 @@ const STORE = {
     traceTs: 'jd_wskey_cap_trace_ts'
 };
 
-/* 兜底配置：Loon Build 733 以下不支持 [Argument]，可直接改这里 */
+/* 兜底配置：Loon 插件参数会覆盖这里 */
 const DEFAULTS = {
-    ql_host: '',
+    ql_host: 'http://192.168.1.2:5700',
     ql_auth: 'openapi',
-    ql_id: '',
-    ql_secret: '',
+    ql_id: 'h6p4roq-Ba3N',
+    ql_secret: 'DyHOL84HVWa7HD-MFAjMqMo2',
     env_name: 'JD_WSCK'
 };
 
 /* 兜底路径：pin 与 wskey 的捕获时间差超过该值则不配对，避免多账号串号 */
 const PAIR_WINDOW_MS = 30 * 60 * 1000;
 
-const cfg = Object.assign({}, DEFAULTS, readArgument());
+const cfg = Object.assign({}, DEFAULTS, pruneEmpty(readArgument()));
 
 (async function main() {
     try {
@@ -312,6 +312,16 @@ function readArgument() {
         }
     } catch (e) { /* 忽略 */ }
     return {};
+}
+
+/* 插件参数留空时不覆盖内置值 */
+function pruneEmpty(obj) {
+    const out = {};
+    for (const k in obj) {
+        const v = obj[k];
+        if (v !== '' && v !== null && v !== undefined) out[k] = v;
+    }
+    return out;
 }
 
 function decodeSafe(v) {
