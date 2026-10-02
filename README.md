@@ -116,23 +116,20 @@ rules:
 网络层去广告本质是「少请求一些数据」，不是「删除广告位」，
 所以开屏可能变成白屏或品牌图、信息流可能出现空白占位，这属正常现象。
 
-## jd-wskey-capture（Loon 插件）
+## jd-wskey-capture
 
 自动提取京东 App 所有已登录账号的 `wskey` 与 `pt_pin`，写入青龙面板的
-`JD_WSCK` 环境变量。
-
-**插件地址**（Loon → 配置 → 插件 → 添加）
-
-```
-https://raw.githubusercontent.com/kajhsdr/Rules/main/loon/jd-wskey-capture.plugin
-```
+`JD_WSCK` 环境变量。Quantumult X 与 Loon 都能用。
 
 ### 文件
 
 | 文件 | 用途 |
 |---|---|
+| `quantumultx/jd-wskey-capture.conf` | Quantumult X 重写配置 |
+| `quantumultx/scripts/jd-wskey-capture.js` | 抓取脚本（QX / Loon 通用） |
+| `quantumultx/scripts/jd-wskey-setup.js` | 一次性配置写入脚本 |
 | `loon/jd-wskey-capture.plugin` | Loon 插件（参数界面 + 脚本挂载 + MITM） |
-| `loon/scripts/jd-wskey-capture.js` | 捕获与上传脚本 |
+| `loon/scripts/jd-wskey-capture.js` | Loon 专用脚本副本 |
 
 ### 抓取原理
 
@@ -164,18 +161,56 @@ https://raw.githubusercontent.com/kajhsdr/Rules/main/loon/jd-wskey-capture.plugi
 京东 App 的请求 Cookie 里几乎不带 `wskey`，唯一可靠来源就是 SSO 接口。
 `wskey` 与 `pt_pin` 也从不出现在同一条 Cookie 里，所以兜底路径需要按时间窗口配对。
 
+### 安装
+
+**Quantumult X**
+
+1. 重写 → 引用 → 添加：
+
+```
+https://cdn.jsdelivr.net/gh/kajhsdr/Rules@main/quantumultx/jd-wskey-capture.conf
+```
+
+2. 填青龙配置（见下）
+3. 打开 MITM、信任证书
+4. 打开京东 App
+
+**Loon**
+
+1. 配置 → 插件 → 添加：
+
+```
+https://raw.githubusercontent.com/kajhsdr/Rules/main/loon/jd-wskey-capture.plugin
+```
+
+2. 在插件参数界面填青龙信息
+3. **断开重连 VPN**（Loon 加了插件后必须重连才会加载脚本）
+4. 打开京东 App
+
 ### 青龙配置
 
-1. 青龙面板 → 系统设置 → 应用设置 → 新建应用，权限勾选「环境变量」
-2. 记下 `Client ID` 与 `Client Secret`
-3. 在 Loon 插件参数里填：青龙地址、鉴权方式选 `openapi`、`client_id`、`client_secret`
+青龙面板 → 系统设置 → 应用设置 → 新建应用，权限勾选「环境变量」，记下
+`Client ID` 与 `Client Secret`。然后：
 
-不想用 OpenApi 就选 `password`，`ql_id` 填用户名、`ql_secret` 填密码。
+- **Loon**：直接填进插件参数（青龙地址 / 鉴权方式 / client_id / client_secret）
+- **Quantumult X**：QX 没有参数界面，用 Safari 访问一次下面这个地址即可
+  （配置存在手机本地的 QX 持久化存储，不进仓库）：
+
+```
+http://www.jd.com/?__jd_wskey_setup&host=<青龙地址>&id=<client_id>&secret=<client_secret>
+```
+
+  例：`http://www.jd.com/?__jd_wskey_setup&host=https://ql.example.com&id=abc123&secret=def456`
+
+  看到「✅ 京东 Wskey 配置完成」通知就成功了。可选参数：`auth=password` 改用
+  用户名密码鉴权、`env=JD_COOKIE` 换环境变量名。完事可以清掉 Safari 历史里的这条 URL。
+
+不想用 OpenApi 就把鉴权方式设为 `password`，此时 `ql_id` 填用户名、`ql_secret` 填密码。
 
 ### 工作流程
 
 1. 打开京东 App（重新登录或切换账号后同样有效）
-2. App 调 SSO 接口 → 插件解析响应，每个账号写一条 `JD_WSCK`
+2. App 调 SSO 接口 → 脚本解析响应，每个账号写一条 `JD_WSCK`
 3. 变量值为 `pin=xxx;wskey=yyy;`，备注为 `JD_Wskey <pin>`
 4. 青龙里已有该 `pt_pin` → 更新；没有 → 新增；值没变 → 不写青龙
 5. 每次抓取都会弹 Loon 通知，内容形如 `新增 2: jd_a, jd_b` 或 `无变化 2`
@@ -197,6 +232,8 @@ https://raw.githubusercontent.com/kajhsdr/Rules/main/loon/jd-wskey-capture.plugi
 ### 注意
 
 - MITM 范围为 `*.jd.com`、`*.jd.hk`，会解密全部京东流量。
-- `[Argument]` 参数界面需要 Loon Build 733 及以上；更老的版本改用脚本顶部的 `DEFAULTS` 常量。
+- **Loon**：`[Argument]` 参数界面需要 Loon Build 733 及以上；更老的版本改用脚本顶部的 `DEFAULTS` 常量。
+- **Quantumult X**：脚本地址默认走 jsDelivr CDN（`raw.githubusercontent.com` 在部分网络不可达）。
+  jsDelivr 对 `@main` 有缓存，改脚本后可能要等一会儿才生效。
 - `wskey` 是长期凭证，等价于账号密码。**抓包文件（.har）不要提交到公开仓库**，
   本仓库已通过 `.gitignore` 屏蔽 `*.har`。
