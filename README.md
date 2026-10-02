@@ -164,7 +164,7 @@ rules:
 1. 重写 → 引用 → 添加：
 
 ```
-https://cdn.jsdelivr.net/gh/kajhsdr/Rules@main/quantumultx/jd-wskey-capture.conf
+https://raw.githubusercontent.com/kajhsdr/Rules/main/quantumultx/jd-wskey-capture.conf
 ```
 
 2. 青龙配置已内置，直接下一步
@@ -220,7 +220,7 @@ https://raw.githubusercontent.com/chavyleung/scripts/master/box/rewrite/boxjs.re
 BoxJs → 底部「订阅」→ 右上角 `+` → 填：
 
 ```
-https://cdn.jsdelivr.net/gh/kajhsdr/Rules@main/quantumultx/jd-wskey.boxjs.json
+https://raw.githubusercontent.com/kajhsdr/Rules/main/quantumultx/jd-wskey.boxjs.json
 ```
 
 **3. 填参数**
@@ -272,7 +272,8 @@ BoxJs → 底部「应用」→「京东 Wskey → 青龙」→ 表单里改 →
 ### 注意
 
 - MITM 范围为 `*.jd.com`、`*.jd.hk`，会解密全部京东流量。
-- 脚本地址走 jsDelivr CDN（`raw.githubusercontent.com` 在部分网络不可达）。
-  jsDelivr 对 `@main` 有缓存，改脚本后可能要等一会儿才生效。
+- 全部走 `raw.githubusercontent.com`，推送后立即生效，没有 CDN 缓存延迟。
+  如果你的网络打不开 raw，把地址换成 jsDelivr：
+  `https://cdn.jsdelivr.net/gh/kajhsdr/Rules@main/<文件路径>`（有缓存，最长需等一会儿）。
 - `wskey` 是长期凭证，等价于账号密码。**抓包文件（.har）不要提交到公开仓库**，
   本仓库已通过 `.gitignore` 屏蔽 `*.har`。
