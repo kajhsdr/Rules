@@ -14,11 +14,8 @@
  *
  * 青龙侧写入格式：变量名 JD_WSCK，值 pin=xxx;wskey=yyy;
  *
- * 配置来源（优先级从低到高）：
- *   1. 下方 CONFIG
- *   2. 持久化存储 key = jd_wskey_config（JSON）
- *   3. BoxJs 订阅（key = @jd_wskey），在 BoxJs 应用里填表单
- * 已内置一套可用配置，不改也能跑。
+ * 配置：已内置在下方 CONFIG，开箱即用。需要覆盖就写持久化存储，
+ * key = jd_wskey_config，value 为同结构 JSON，优先级高于 CONFIG。
  */
 
 const CONFIG = {
@@ -32,9 +29,6 @@ const CONFIG = {
 };
 
 const CONFIG_KEY = 'jd_wskey_config';
-
-/* BoxJs 订阅：quantumultx/jd-wskey.boxjs.json 里的设置项前缀 */
-const BOXJS_KEY = '@jd_wskey';
 
 const STORE = {
     pin: 'jd_wskey_cap_pin',
@@ -279,16 +273,12 @@ function trace() {
 function loadConfig() {
     const out = Object.assign({}, CONFIG);
 
-    // 手动写进持久化存储的 JSON
+    // 持久化存储里的 JSON 覆盖
     const raw = read(CONFIG_KEY);
     if (raw) {
         const json = parse(raw);
         if (json && typeof json === 'object') Object.assign(out, pruneEmpty(json));
     }
-
-    // BoxJs 订阅（界面里填的，优先级最高）
-    const boxjs = parse(read(BOXJS_KEY));
-    if (boxjs && typeof boxjs === 'object') Object.assign(out, pruneEmpty(boxjs));
 
     return out;
 }
