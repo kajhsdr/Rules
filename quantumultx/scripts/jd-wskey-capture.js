@@ -180,8 +180,9 @@ async function sync(pairs) {
         const value = 'pin=' + pair.pin + ';wskey=' + pair.wskey + ';';
         const remarks = 'JD_Wskey ' + decodeSafe(pair.pin);
 
+        // 青龙 2.22.0 起 open API 的 PUT 只收单个对象，POST 仍收数组
         const body = old
-            ? [{ id: old.id, _id: old._id, name: envName, value: value, remarks: remarks }]
+            ? { id: old.id, name: envName, value: value, remarks: remarks }
             : [{ name: envName, value: value, remarks: remarks }];
         const res = parse((await http(old ? 'PUT' : 'POST', host + api, headers,
             JSON.stringify(body))).body);
