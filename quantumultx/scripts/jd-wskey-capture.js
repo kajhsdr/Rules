@@ -8,8 +8,14 @@
  *   其中 sessionTicket 就是 wskey（与 App 请求 Cookie 里的 wskey 完全一致）。
  *   → pin 与 wskey 天然配对，一次拿到全部账号。
  *
+ * 补充路径（请求脚本）：
+ *   新版 sh.jd.com/d 的请求 Cookie 直接带 wskey，但通常没有 pt_pin，只有 pin_hash。
+ *   所以另挂 api.m.jd.com / sso.jd.com，只做一件事：缓存 pt_pin ↔ pin_hash 映射，
+ *   给 sh.jd.com/d 反查账号用。
+ *   触发时机：打开 App，以及「我的 → 消息」。
+ *
  * 兜底路径（请求脚本）：
- *   若 SSO 接口未触发，则从 *.jd.com 请求 Cookie 里分别捕获 wskey 与 pt_pin
+ *   从 im-x.jd.com 请求 Cookie 里分别捕获 wskey 与 pt_pin
  *   （实测二者从不出现在同一条 Cookie 中），按捕获时间邻近配对。
  *
  * 青龙侧写入格式：变量名 JD_WSCK，值 pin=xxx;wskey=yyy;
@@ -37,21 +43,28 @@ const STORE = {
     wskeyTs: 'jd_wskey_cap_wskey_ts',
     token: 'jd_wskey_ql_token',
     tokenExp: 'jd_wskey_ql_token_exp',
-    traceTs: 'jd_wskey_cap_trace_ts'
+    traceTs: 'jd_wskey_cap_trace_ts',
+    pinMap: 'jd_wskey_cap_pinmap',
+    last: 'jd_wskey_cap_last'
 };
 
 /* 兜底路径：pin 与 wskey 的捕获时间差超过该值则不配对，避免多账号串号 */
 const PAIR_WINDOW_MS = 30 * 60 * 1000;
 
 const cfg = loadConfig();
+const REQ_URL = (typeof $request !== 'undefined' && $request && $request.url) || '';
 
 (async function main() {
     try {
         trace();
         if (typeof $response !== 'undefined' && $response && typeof $response.body !== 'undefined') {
             await fromSsoResponse();
-        } else {
+        } else if (/^https?:\/\/sh\.jd\.com\/d(?:[\/?#]|$)/i.test(REQ_URL)) {
+            await fromShRequest();
+        } else if (/^https?:\/\/im-x\.jd\.com\//i.test(REQ_URL)) {
             await fromRequestCookie();
+        } else {
+            await cachePinMap();
         }
     } catch (e) {
         const msg = (e && e.message) || String(e);
@@ -65,9 +78,12 @@ const cfg = loadConfig();
 /* ---------- 主路径：SSO 响应 ---------- */
 
 async function fromSsoResponse() {
-    const json = parse($response.body);
+    const raw = $response.body || '';
+    const json = parse(raw);
     if (!json || !Array.isArray(json.result)) {
-        console.log('[JD-Wskey] SSO 响应无法解析，body 长度 ' + String($response.body || '').length);
+        console.log('[JD-Wskey] SSO 响应无法解析，body 长度 ' + String(raw).length);
+        notify('⚠️ 京东 Wskey 未解析', 'SSO 响应不是预期结构',
+            'body 长度 ' + String(raw).length);
         return;
     }
 
@@ -75,9 +91,85 @@ async function fromSsoResponse() {
         .filter(function (it) { return it && isValidPin(it.pin) && isValidWskey(it.sessionTicket); })
         .map(function (it) { return { pin: it.pin, wskey: it.sessionTicket }; });
 
-    if (!pairs.length) return;
-    console.log('[JD-Wskey] SSO 返回 ' + pairs.length + ' 个账号');
+    if (!pairs.length) {
+        const sample = json.result[0] || {};
+        console.log('[JD-Wskey] SSO 返回 ' + json.result.length + ' 条，无一条通过校验；样本 pin=' +
+            (sample.pin || '(无)') + ' sessionTicket=' + mask(sample.sessionTicket));
+        notify('⚠️ 京东 Wskey 未捕获', 'SSO 返回 ' + json.result.length + ' 条但无有效账号',
+            'pin 或 sessionTicket 格式可能已变');
+        return;
+    }
+
+    console.log('[JD-Wskey] SSO 返回 ' + pairs.length + ' 个账号: ' + describeAll(pairs));
     await sync(pairs);
+    // 记下来，sh.jd.com/d 那边值没变就不必再去青龙跑一趟
+    pairs.forEach(function (p) { writeLast(p.pin, p.wskey); });
+}
+
+/* ---------- 补充路径：sh.jd.com/d ---------- */
+
+/* sh.jd.com/d 的请求 Cookie 直接带 wskey，但通常没有 pt_pin，只有 pin_hash，
+   用 api.m.jd.com / sso.jd.com 攒下的映射反查账号。 */
+async function fromShRequest() {
+    const cookie = header($request.headers, 'cookie');
+    if (!cookie) return;
+
+    const wskey = matchCookie(cookie, 'wskey');
+    if (!isValidWskey(wskey)) return;
+
+    const hash = matchCookie(cookie, 'pin_hash');
+    const pin = matchCookie(cookie, 'pt_pin') || matchCookie(cookie, 'pin') || lookupPin(hash);
+    if (!isValidPin(pin)) {
+        console.log('[JD-Wskey] sh.jd.com 拿到 wskey，但认不出账号' +
+            (hash ? '（pin_hash=' + mask(hash) + ' 无缓存，先打开一次京东 App 首页攒映射）'
+                  : '（无 pin_hash）'));
+        return;
+    }
+
+    // 同一个 pin 的 wskey 没变就不去青龙白跑一趟（点消息会反复触发这条规则）
+    if (readLast(pin) === wskey) return;
+
+    console.log('[JD-Wskey] sh.jd.com 捕获 ' + decodeSafe(pin) + ' ' + mask(wskey));
+    await sync([{ pin: pin, wskey: wskey }]);
+    writeLast(pin, wskey);
+}
+
+/* 只为攒 pt_pin ↔ pin_hash 映射，不触发上传 */
+async function cachePinMap() {
+    const cookie = header($request.headers, 'cookie');
+    if (!cookie) return;
+
+    const pin = matchCookie(cookie, 'pt_pin') || matchCookie(cookie, 'pin');
+    const hash = matchCookie(cookie, 'pin_hash');
+    if (!isValidPin(pin) || !hash) return;
+
+    const map = parse(read(STORE.pinMap)) || {};
+    if (map[hash] === pin) return;
+
+    map[hash] = pin;
+    const keys = Object.keys(map);
+    if (keys.length > 50) delete map[keys[0]];
+    write(STORE.pinMap, JSON.stringify(map));
+    console.log('[JD-Wskey] 缓存 pin_hash → ' + decodeSafe(pin));
+}
+
+function lookupPin(hash) {
+    if (!hash) return '';
+    const map = parse(read(STORE.pinMap));
+    return (map && map[hash]) || '';
+}
+
+function readLast(pin) {
+    const last = parse(read(STORE.last));
+    return (last && last[pin]) || '';
+}
+
+function writeLast(pin, wskey) {
+    const last = parse(read(STORE.last)) || {};
+    last[pin] = wskey;
+    const keys = Object.keys(last);
+    if (keys.length > 50) delete last[keys[0]];
+    write(STORE.last, JSON.stringify(last));
 }
 
 /* ---------- 兜底路径：请求 Cookie ---------- */
@@ -94,11 +186,13 @@ async function fromRequestCookie() {
         write(STORE.wskey, wskey);
         write(STORE.wskeyTs, Date.now());
         changed = true;
+        console.log('[JD-Wskey] im-x 捕获 wskey ' + mask(wskey));
     }
     if (isValidPin(pin) && pin !== read(STORE.pin)) {
         write(STORE.pin, pin);
         write(STORE.pinTs, Date.now());
         changed = true;
+        console.log('[JD-Wskey] im-x 捕获 pt_pin ' + decodeSafe(pin));
     }
     if (!changed) return;
 
@@ -168,6 +262,7 @@ async function sync(pairs) {
 
         if (old && String(old.value || '').indexOf(pair.wskey) !== -1) {
             kept.push(pair.pin);
+            console.log('[JD-Wskey] 无变化 ' + decodeSafe(pair.pin));
             continue;
         }
 
@@ -186,9 +281,13 @@ async function sync(pairs) {
                 ' 失败: ' + errText(res));
         }
 
-        if (old) updated.push(pair.pin);
-        else {
+        if (old) {
+            updated.push(pair.pin);
+            console.log('[JD-Wskey] 更新 ' + decodeSafe(pair.pin) + ' ' +
+                mask(matchCookie(String(old.value || ''), 'wskey')) + ' → ' + mask(pair.wskey));
+        } else {
             created.push(pair.pin);
+            console.log('[JD-Wskey] 新增 ' + decodeSafe(pair.pin) + ' ' + mask(pair.wskey));
             list.push({ value: value });
         }
     }
@@ -382,6 +481,20 @@ function header(headers, name) {
         else if (v) parts.push(String(v));
     }
     return parts.join('; ');
+}
+
+function describeAll(pairs) {
+    return pairs.map(function (p) {
+        return decodeSafe(p.pin) + '=' + mask(p.wskey);
+    }).join(', ');
+}
+
+/* 日志只暴露前缀与长度，避免完整凭证落到日志里 */
+function mask(v) {
+    if (!v) return '(空)';
+    const s = String(v);
+    if (s.length <= 14) return s;
+    return s.slice(0, 8) + '…' + s.slice(-4) + '(' + s.length + ')';
 }
 
 function decodeSafe(v) {

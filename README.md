@@ -143,8 +143,17 @@ rules:
 `sessionTicket` 就是 `wskey` —— 与 App 实际带到 `im-x.jd.com` 请求 Cookie 里的
 `wskey` 逐字节相同（已实测比对）。pin 与 wskey 同源，直接配对，不需要猜。
 
-脚本主路径挂这个接口的**响应**（`script-response-body`）；若接口未触发，
-再用 `script-request-header` 从 `*.jd.com` 的 Cookie 兜底抓 `wskey` / `pt_pin`。
+脚本挂四个位置：
+
+| 位置 | 挂钩 | 作用 |
+|---|---|---|
+| `sso.jd.com/appJdst/update` | 响应 | 主路径，一次拿全部账号的 `pin` + `sessionTicket`(=wskey) |
+| `sh.jd.com/d` | 请求 Cookie | 补充路径，Cookie 里直接带 `wskey` |
+| `api.m.jd.com` / `sso.jd.com` | 请求 Cookie | **只**缓存 `pt_pin` ↔ `pin_hash` 映射，给上一条反查账号用 |
+| `im-x.jd.com` | 请求 Cookie | 兜底，按时间窗口配对 `wskey` 与 `pt_pin` |
+
+`sh.jd.com/d` 的 Cookie 通常只有 `wskey` 和 `pin_hash`，没有 `pt_pin`，
+所以要靠 `api.m.jd.com` 攒下的映射反查是哪个账号。
 
 ### 实测数据（383 条请求的抓包）
 
@@ -155,8 +164,11 @@ rules:
 | `wskey` | **1** | 仅 `im-x.jd.com` 广告请求 |
 | `sessionTicket` | 2 个账号 | `sso.jd.com/appJdst/update` 响应 |
 
-京东 App 的请求 Cookie 里几乎不带 `wskey`，唯一可靠来源就是 SSO 接口。
-`wskey` 与 `pt_pin` 也从不出现在同一条 Cookie 里，所以兜底路径需要按时间窗口配对。
+京东 App 的请求 Cookie 里几乎不带 `wskey`，所以主路径是 SSO 接口。
+`wskey` 与 `pt_pin` 也从不出现在同一条 Cookie 里，兜底路径需要按时间窗口配对。
+
+> `sh.jd.com/d` 这条来自社区实现 [jdzjy/Surge](https://github.com/jdzjy/Surge)，
+> 本仓库尚未实抓验证。接入后第一次触发要看 QX 日志确认 Cookie 里真的带 `wskey`。
 
 ### 安装
 
@@ -215,8 +227,9 @@ https://raw.githubusercontent.com/kajhsdr/Rules/main/quantumultx/jd-wskey-captur
 
 ### 工作流程
 
-1. 打开京东 App（重新登录或切换账号后同样有效）
-2. App 调 SSO 接口 → 脚本解析响应，每个账号写一条 `JD_WSCK`
+1. 打开京东 App（重新登录或切换账号后同样有效），或进「我的 → 消息」
+2. 打开 App 走 SSO 接口，一次拿到全部账号；「我的 → 消息」走 `sh.jd.com/d`，
+   补抓单个账号的最新 `wskey`。两个来源都会写 `JD_WSCK`
 3. 变量值为 `pin=xxx;wskey=yyy;`，备注为 `JD_Wskey <pin>`
 4. 青龙里已有该 `pt_pin` → 更新；没有 → 新增；值没变 → 不写青龙；在排除列表里 → 跳过
 5. 每次抓取都会弹 QX 通知，内容形如 `新增 2: jd_a, jd_b` 或 `无变化 2`
