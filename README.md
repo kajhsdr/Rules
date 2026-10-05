@@ -168,7 +168,8 @@ rules:
 `wskey` 与 `pt_pin` 也从不出现在同一条 Cookie 里，兜底路径需要按时间窗口配对。
 
 > `sh.jd.com/d` 这条来自社区实现 [jdzjy/Surge](https://github.com/jdzjy/Surge)，
-> 本仓库尚未实抓验证。接入后第一次触发要看 QX 日志确认 Cookie 里真的带 `wskey`。
+> 已在 iOS Quantumult X 上实抓验证：进「我的 → 消息」即可触发，
+> 并正确反查出 `pt_pin` 后写入 `JD_WSCK`。
 
 ### 安装
 
